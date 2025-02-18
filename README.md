@@ -1,8 +1,14 @@
-# Template de Blog Ghost sur Clever Cloud
+# Ghost Blog Template on Clever Cloud
 
-Ce projet est un template de [blog Ghost](https://ghost.org/) fonctionnant sous Node.js 20 et déployé sur [Clever Cloud](https://www.clever-cloud.com/).
+This project is a template for a [Ghost blog](https://ghost.org) running on Node.js 20 and deployed on [Clever Cloud](https://clever-cloud.com).
 
-Ce projet se base sur l'installation [locale](https://ghost.org/docs/install/local/) de Ghost, ainsi que son [code source](https://github.com/TryGhost/Ghost).
+It is based on the [local installation](https://ghost.org/docs/install/local/) of Ghost, as well as its source code on [Github](https://github.com/TryGhost/Ghost/).
+
+## What is Ghost?
+
+Ghost is a modern, open-source publishing platform designed for professional bloggers, writers, and content creators. Built with Node.js, it offers a lightweight, fast, and flexible alternative to traditional CMS platforms. 
+
+Ghost provides a clean, distraction-free writing experience, powerful SEO features, and extensive customization options through themes and integrations. It is often used for personal blogs, newsletters, and online publications.
 
 ## Prérequis
 
@@ -13,20 +19,23 @@ Ce projet se base sur l'installation [locale](https://ghost.org/docs/install/loc
 - **Clever Tools CLI** ([documentation](https://www.clever-cloud.com/developers/doc/cli/))
 - **Git**
 
-## Installation et Configuration
+## Installation and configuration
 
-### 1. Initialisation du projet
+### 1. Initialize your project
 
-Créez le dossier du projet et installez Ghost en mode local :
+Create the project file and install locally Ghost:
 ```sh
+# Create the project file
 mkdir myblog && cd myblog
-nvm use 20 #utilise node 20
+# Install Ghost-CLI
+npm install -g ghost-cli@latest
+nvm use 20 #to use node 20
+# Install Ghost
 ghost install local
 ghost stop
-npm install
 ```
 
-Supprimez le thème par défaut et ajoutez les sous-modules pour d'autres thèmes :
+Remove the default theme and add custom theme submodules:
 ```sh
 rm -r content/themes/casper
 cp -r current/content/themes/casper/ content/themes/
@@ -34,34 +43,34 @@ git init
 cd content/themes/
 git submodule add https://github.com/curiositry/mnml-ghost-theme
 git submodule add https://github.com/zutrinken/attila/
-wget https://github.com/TryGhost/Source/archive/refs/tags/<last-version>.zip -O source.zip #prendre la dernière version
+wget https://github.com/TryGhost/Source/archive/refs/tags/<last-version>.zip -O source.zip #check and use the lastest version
 mkdir source
 unzip source.zip -d temp
 mv temp/*/* source/
 rm -R temp source.zip
 ```
 
-Implémenter le module S3 :
+Add the S3 module to use Cellar S3:
 ```sh
+npm install ghost-storage-adapter-s3
 mkdir -p ./content/adapters/storage
 cp -r ./node_modules/ghost-storage-adapter-s3 ./content/adapters/storage/s3
-
 ```
 
-### 2. Création et configuration sur Clever Cloud
+### 2. Create and configure Node application and MySQL
 
-Créez l'application Node.js sur Clever Cloud :
+Create the Node.js app on Clever Cloud:
 ```sh
 clever create --type node myblog
 ```
 
-Créez une base de données MySQL et liez-la à l'application :
+Create MySQL addon and link it to your Node.js application:
 ```sh
 clever addon create mysql-addon --plan s_sml myblogsql
 clever service link-addon myblogsql
 ```
-
-Ajoutez les variables d'environnement pour la connexion à la base de données :
+Ghost configuration file can't use direct environment variables.
+Set the following environment variables to connext your app to the database:
 ```sh
 clever env set database__connection__host <ADDON_HOST>
 clever env set database__connection__user <ADDON_USER>
@@ -71,25 +80,24 @@ clever env set database__connection__port <ADDON_PORT>
 clever env set url https://<domain_URL_blog>
 ```
 
-### 3. Installation et configuration de Cellar (Stockage S3 sur Clever Cloud)
+### 3. Install and configure Cellar S3 
 
-Créez un Cellar et liez-le à votre application :
+Create the Cellar S3 addon on Clever Cloud :
 ```sh
 clever addon create cellar-addon --plan s_sml <cellar-app>
 clever service link-addon <cellar-app>
 ```
 
-Sur la console de votre addon Cellar S3, créer un bucket pour votre blog.
+On you CEllar S3 addon console, create a bucket for your blog.
 
-Ajoutez les variables d'environnement pour configurer Ghost avec Cellar :
+Add the environment variables to configure Ghost with Cellar:
 ```sh
 clever env set storage__s3__accessKeyId <CELLAR_ACCESS_KEY>
 clever env set storage__s3__secretAccessKey <CELLAR_SECRET_KEY>
 clever env set storage__s3__bucket <your-bucket>
 clever env set storage__s3__region <CELLAR_REGION>
 ```
-
-Ajoutez la policy suivante pour donner un [accès public en lecture](https://www.clever-cloud.com/developers/doc/addons/cellar/#public-bucket-policy) :
+Set the public read access policy for your Cellar bucket ([documentation](https://www.clever-cloud.com/developers/doc/addons/cellar/#public-bucket-policy)) :
 ```json
 {
     "Version": "2012-10-17",
@@ -123,9 +131,9 @@ Ajoutez la policy suivante pour donner un [accès public en lecture](https://www
 }
 ```
 
-### 4. Configuration du script de pré-déploiement
+### 4. Create pre run hook
 
-À la racine du projet, créez un fichier `clevercloud-pre-run-hook.sh` et ajoutez le code suivant :
+In the project's root folder, create file `clevercloud-pre-run-hook.sh` :
 ```sh
 #!/bin/sh
 npm install -g ghost-cli 
@@ -134,21 +142,20 @@ cd ghost
 ghost install local 
 ghost stop
 cp ../config.production.json .
-npm install ghost-storage-adapter-s3
 mkdir -p ./content/adapters/storage
-cp -r ../node_modules/ghost-storage-adapter-s3 content/adapters/storage/s3
+cp -r ../content/adapters/storage/s3 content/adapters/storage/s3
 rm -R content/themes/source
 cp ../content/themes/source content/themes/
 ```
 
-Ajouter le droit d'exécution du script
+Grant execution permission to the script:
 ```sh
 chmod +x .clevercloud.sh
 ```
 
-### 5. Configuration de Ghost
+### 5. Configure Ghost
 
-Créez un fichier `config.production.json` à la racine :
+Create the file `config.production.json` in the project's root folder:
 ```json
 {
   "url": "https://<your-url-app>/",
@@ -176,9 +183,9 @@ Créez un fichier `config.production.json` à la racine :
 }
 ```
 
-### 6. Création des fichiers nécessaires
+### 6. Create package.json and .gitignore
 
-Créez un `package.json` minimal :
+Create `package.json`:
 ```json
 {
     "name": "ghost",
@@ -192,17 +199,18 @@ Créez un `package.json` minimal :
 }
 ```
 
-Ajoutez un fichier `.gitignore` :
+Create `.gitignore` :
 ```
 .ghost-cli
 config.development.json
 current
 versions
+node_modules
 ```
 
-### 7. Déploiement sur Clever Cloud
+### 7. Deploy on Clever Cloud
 
-Initialisez Git, ajoutez les fichiers et déployez l'application :
+Initialize git, add files and push:
 ```sh
 git add clevercloud.sh package.json config.production.json content
 git commit -m "Initial commit"
@@ -210,7 +218,6 @@ git remote add clever <CLEVER_GIT_URL>
 clever deploy
 ```
 
-## Remarque
+## More information
 
-Pour un petit blog, les plans XS ou S sont largement suffisants pour l'application Node.js.
-
+For a small blog, you can use XS or S Node.js plan.

@@ -2,3 +2,4 @@
 config.development.json
 current
 versions
+node_modules
